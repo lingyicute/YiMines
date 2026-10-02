@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#121116">
+<title>YiMines Web · 扫雷</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<style>
+  :root { --h: 265; }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: hsl(var(--h) 14% 8%);
+    --header: hsl(var(--h) 14% 7%);
+    --glow: hsl(var(--h) 35% 20% / .55);
+    --surface: hsl(var(--h) 12% 11%);
+    --surf-c: hsl(var(--h) 10% 15%);
+    --surf-ch: hsl(var(--h) 9% 20%);
+    --surf-chh: hsl(var(--h) 8% 26%);
+    --primary: hsl(var(--h) 75% 81%);
+    --on-primary: hsl(var(--h) 55% 18%);
+    --primary-c: hsl(var(--h) 42% 28%);
+    --on-primary-c: hsl(var(--h) 90% 91%);
+    --secondary-c: hsl(var(--h) 14% 30%);
+    --on-secondary-c: hsl(var(--h) 30% 90%);
+    --on-surface: hsl(var(--h) 15% 91%);
+    --on-surf-var: hsl(var(--h) 10% 74%);
+    --outline: hsl(var(--h) 8% 56%);
+    --outline-v: hsl(var(--h) 8% 32%);
+    --cell: hsl(var(--h) 20% 31%);
+    --cell-hover: hsl(var(--h) 24% 37%);
+    --cell-open: hsl(var(--h) 14% 10.5%);
+    --err: hsl(5 80% 70%);
+    --err-c: hsl(5 45% 28%);
+    --on-err-c: hsl(5 100% 92%);
+    --flag: hsl(var(--h) 80% 82%);
+    --n1: hsl(210 90% 72%); --n2: hsl(140 55% 65%); --n3: hsl(0 85% 72%); --n4: hsl(270 80% 79%);
+    --n5: hsl(25 90% 68%); --n6: hsl(180 65% 62%); --n7: hsl(330 80% 76%); --n8: hsl(0 0% 76%);
+    --shadow: 0 8px 28px rgb(0 0 0 / .45);
+  }
+  html[data-theme="light"] {
+    color-scheme: light;
+    --bg: hsl(var(--h) 40% 98%);
+    --header: hsl(var(--h) 40% 97%);
+    --glow: hsl(var(--h) 80% 85% / .6);
+    --surface: hsl(var(--h) 30% 97%);
+    --surf-c: hsl(var(--h) 22% 93%);
+    --surf-ch: hsl(var(--h) 20% 90%);
+    --surf-chh: hsl(var(--h) 18% 86%);
+    --primary: hsl(var(--h) 45% 42%);
+    --on-primary: #fff;
+    --primary-c: hsl(var(--h) 90% 90%);
+    --on-primary-c: hsl(var(--h) 70% 16%);
+    --secondary-c: hsl(var(--h) 35% 88%);
+    --on-secondary-c: hsl(var(--h) 30% 14%);
+    --on-surface: hsl(var(--h) 20% 10%);
+    --on-surf-var: hsl(var(--h) 12% 30%);
+    --outline: hsl(var(--h) 8% 48%);
+    --outline-v: hsl(var(--h) 14% 78%);
+    --cell: hsl(var(--h) 38% 82%);
+    --cell-hover: hsl(var(--h) 42% 77%);
+    --cell-open: hsl(var(--h) 30% 98%);
+    --err: hsl(5 70% 46%);
+    --err-c: hsl(5 90% 90%);
+    --on-err-c: hsl(5 80% 20%);
+    --flag: hsl(var(--h) 60% 40%);
+    --n1: hsl(215 85% 42%); --n2: hsl(135 60% 30%); --n3: hsl(0 70% 45%); --n4: hsl(270 60% 42%);
+    --n5: hsl(22 90% 40%); --n6: hsl(180 80% 28%); --n7: hsl(330 70% 42%); --n8: hsl(0 0% 30%);
+    --shadow: 0 8px 28px rgb(0 0 0 / .18);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body {
+    font-family: 'Nebulove', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+    background:
+      radial-gradient(800px 480px at 85% 80px, var(--glow), transparent 70%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--on-surface);
+    min-height: 100dvh;
+    display: flex; flex-direction: column;
+    transition: background-color .3s, color .3s;
+  }
+  button { font-family: inherit; color: inherit; cursor: pointer; border: 0; background: none; padding: 0; }
+  svg { display: block; }
+
+  /* Header */
+  header { background: var(--header); position: sticky; top: 0; z-index: 30; transition: background .3s; }
+  .header-in { max-width: 640px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+  .logo { width: 52px; height: 52px; border-radius: 16px; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; flex: none; }
+  .brand { display: flex; align-items: center; gap: 8px; font-size: 22px; font-weight: 700; letter-spacing: -.2px; }
+  .badge { font-size: 13px; font-weight: 600; padding: 2px 10px; border-radius: 999px; background: var(--primary-c); color: var(--on-primary-c); }
+  .spacer { flex: 1; }
+  .icon-btn { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--on-surface); transition: background .2s, transform .15s; position: relative; }
+  .icon-btn:hover { background: color-mix(in srgb, var(--on-surface) 10%, transparent); }
+  .icon-btn:active { transform: scale(.9); }
+  .icon-btn svg { width: 26px; height: 26px; }
+  .icon-btn.sm { width: 38px; height: 38px; }
+
+  /* Popovers */
+  .popover { position: absolute; right: 0; top: calc(100% + 6px); background: var(--surf-ch); border-radius: 20px; box-shadow: var(--shadow); padding: 10px; z-index: 40; opacity: 0; transform: scale(.92) translateY(-6px); transform-origin: top right; pointer-events: none; transition: opacity .18s, transform .18s; }
+  .popover.open { opacity: 1; transform: none; pointer-events: auto; }
+  .anchor { position: relative; }
+  .palette-pop { width: 232px; }
+  .palette-title { font-size: 13px; font-weight: 600; color: var(--on-surf-var); padding: 4px 8px 8px; }
+  .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .swatch { width: 100%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; color: #000; border: 2px solid transparent; transition: transform .15s; }
+  .swatch:hover { transform: scale(1.08); }
+  .swatch.sel { border-color: var(--on-surface); }
+  .swatch svg { width: 20px; height: 20px; opacity: 0; }
+  .swatch.sel svg { opacity: 1; }
+  .menu-pop { min-width: 190px; padding: 8px; }
+  .menu-item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; border-radius: 14px; font-size: 15px; font-weight: 500; text-decoration: none; color: var(--on-surface); }
+  .menu-item:hover { background: color-mix(in srgb, var(--on-surface) 10%, transparent); }
+  .menu-item svg { width: 22px; height: 22px; color: var(--on-surf-var); }
+
+  /* Main */
+  main { flex: 1; width: 100%; max-width: 640px; margin: 0 auto; padding: 8px 16px 12px; }
+  .title-row { display: flex; align-items: baseline; gap: 12px; padding: 6px 4px 14px; }
+  h1 { margin: 0; font-size: 34px; font-weight: 900; letter-spacing: 1px; }
+  .sub { font-size: 15px; font-weight: 600; color: var(--on-surf-var); }
+
+  .stats { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
+  .card { flex: 1; min-width: 0; height: 78px; border-radius: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: background .3s; }
+  .card.a { background: var(--surf-chh); }
+  .card.b { background: var(--primary-c); color: var(--on-primary-c); }
+  .card .lb { font-size: 13px; font-weight: 700; opacity: .8; }
+  .card .vl { font-size: 30px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .circle { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; flex: none; transition: background .2s, transform .15s, color .2s; }
+  .circle:active { transform: scale(.9); }
+  .circle svg { width: 26px; height: 26px; }
+  .circle.tonal { background: var(--surf-ch); color: var(--on-surface); }
+  .circle.tonal:hover { background: var(--surf-chh); }
+  .circle.tonal.active { background: var(--primary); color: var(--on-primary); }
+  .circle.filled { background: var(--primary); color: var(--on-primary); }
+  .circle.filled:hover { filter: brightness(1.08); }
+  .circle.filled:active svg { transform: rotate(180deg); }
+  .circle svg { transition: transform .35s; }
+
+  /* Board */
+  .board-wrap { background: var(--surf-c); border-radius: 30px; padding: 12px; overflow: auto; transition: background .3s; scrollbar-width: thin; }
+  .board { display: grid; width: max-content; margin: 0 auto; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .cell { width: var(--cs); height: var(--cs); border-radius: calc(var(--cs) * .26); background: var(--cell); font-weight: 800; font-size: calc(var(--cs) * .56); line-height: 1; display: grid; place-items: center; cursor: pointer; transition: background .15s, transform .1s; position: relative; font-variant-numeric: tabular-nums; }
+  .cell svg { width: 62%; height: 62%; }
+  .cell:not(.open):hover { background: var(--cell-hover); }
+  .cell:not(.open):active { transform: scale(.9); }
+  .cell.open { background: var(--cell-open); cursor: default; }
+  .cell.open.has { cursor: pointer; }
+  .cell.flag { color: var(--flag); }
+  .cell.mine { background: var(--err-c); color: var(--on-err-c); }
+  .cell.boom { background: var(--err); color: #fff; }
+  .cell.wrong { background: var(--err-c); color: var(--on-err-c); }
+  .cell.wrong::after { content: ''; position: absolute; left: 18%; right: 18%; top: 50%; height: 3px; border-radius: 2px; background: var(--err); transform: rotate(-45deg); }
+  .cell.cursor { box-shadow: inset 0 0 0 3px var(--primary); }
+  .cell.anim { animation: pop .28s cubic-bezier(.2, .8, .3, 1.3) backwards; }
+  .cell.boom.anim { animation: boom .5s ease backwards; }
+  .n1 { color: var(--n1); } .n2 { color: var(--n2); } .n3 { color: var(--n3); } .n4 { color: var(--n4); }
+  .n5 { color: var(--n5); } .n6 { color: var(--n6); } .n7 { color: var(--n7); } .n8 { color: var(--n8); }
+  @keyframes pop { from { transform: scale(.55); opacity: .2; } to { transform: scale(1); opacity: 1; } }
+  @keyframes boom { 0% { transform: scale(.6); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+  .board.shake { animation: shake .45s; }
+  @keyframes shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+
+  /* Chips */
+  .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 20px 0 14px; }
+  .chip { height: 42px; padding: 0 18px; border-radius: 13px; border: 1px solid var(--outline); font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; transition: background .2s, transform .15s; color: var(--on-surface); }
+  .chip:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); }
+  .chip:active { transform: scale(.95); }
+  .chip.sel { background: var(--secondary-c); color: var(--on-secondary-c); border-color: transparent; }
+  .chip svg { width: 18px; height: 18px; }
+  .chip small { font-size: 12px; font-weight: 500; opacity: .75; }
+
+  .hints { text-align: center; color: var(--on-surf-var); font-size: 14px; line-height: 2; padding: 0 4px; }
+  kbd { font-family: inherit; font-size: 12px; display: inline-block; min-width: 24px; padding: 0 6px; line-height: 22px; border: 1px solid var(--outline-v); border-radius: 8px; background: var(--surf-c); color: var(--on-surf-var); text-align: center; margin: 0 1px; }
+
+  footer { text-align: center; padding: 20px 16px calc(24px + env(safe-area-inset-bottom)); font-size: 14px; color: var(--on-surf-var); }
+  footer a { color: var(--primary); font-weight: 700; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* Modal */
+  .overlay { position: fixed; inset: 0; background: rgb(0 0 0 / .5); backdrop-filter: blur(4px); display: grid; place-items: center; padding: 20px; z-index: 100; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  .modal { background: var(--surf-ch); color: var(--on-surface); width: 100%; max-width: 360px; border-radius: 30px; padding: 26px 24px 20px; box-shadow: var(--shadow); transform: scale(.88); transition: transform .25s cubic-bezier(.2, .8, .3, 1.2); max-height: 86dvh; overflow: auto; }
+  .overlay.open .modal { transform: none; }
+  .modal .mi { width: 56px; height: 56px; border-radius: 20px; display: grid; place-items: center; margin: 0 auto 12px; background: var(--primary-c); color: var(--on-primary-c); }
+  .modal .mi.bad { background: var(--err-c); color: var(--on-err-c); }
+  .modal .mi svg { width: 30px; height: 30px; }
+  .modal h2 { margin: 0 0 8px; text-align: center; font-size: 24px; font-weight: 800; }
+  .modal .body { font-size: 15px; line-height: 1.7; color: var(--on-surf-var); }
+  .modal .body.center { text-align: center; }
+  .modal .body b { color: var(--on-surface); }
+  .modal ul { margin: 0; padding-left: 20px; }
+  .modal table { width: 100%; border-collapse: collapse; }
+  .modal td { padding: 8px 4px; border-bottom: 1px solid var(--outline-v); }
+  .modal td:last-child { text-align: right; font-weight: 700; color: var(--on-surface); font-variant-numeric: tabular-nums; }
+  .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+  .btn { height: 42px; padding: 0 22px; border-radius: 999px; font-weight: 700; font-size: 15px; color: var(--primary); transition: background .2s, transform .15s; }
+  .btn:hover { background: color-mix(in srgb, var(--primary) 12%, transparent); }
+  .btn:active { transform: scale(.95); }
+  .btn.fill { background: var(--primary); color: var(--on-primary); }
+  .btn.fill:hover { filter: brightness(1.08); }
+
+  @media (min-width: 640px) {
+    .card { height: 84px; }
+    .board-wrap { padding: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+  /* ===== Responsive / proportional scaling ===== */
+  html, body { overflow-x: hidden; }
+  body { min-width: 0; }
+
+  .header-in { padding: clamp(8px, 2.6vw, 12px) clamp(10px, 4vw, 16px); gap: clamp(4px, 1.8vw, 12px); }
+  .logo { width: clamp(38px, 11.5vw, 52px); height: clamp(38px, 11.5vw, 52px); border-radius: clamp(12px, 3.6vw, 16px); }
+  .logo svg { width: 62%; height: 62%; }
+  .brand { font-size: clamp(16px, 5.4vw, 22px); gap: clamp(4px, 1.6vw, 8px); white-space: nowrap; min-width: 0; margin-left: clamp(2px, 1vw, 4px); }
+  .badge { font-size: clamp(10px, 3.2vw, 13px); padding: 2px clamp(6px, 2.2vw, 10px); }
+  .spacer { flex: 1 1 0; min-width: 0; }
+  .icon-btn { width: clamp(34px, 10.4vw, 44px); height: clamp(34px, 10.4vw, 44px); flex: none; }
+  .icon-btn svg { width: clamp(20px, 6.4vw, 26px); height: clamp(20px, 6.4vw, 26px); }
+  .palette-pop { width: min(232px, calc(100vw - 24px)); }
+
+  main { padding: 8px clamp(10px, 4vw, 16px) 12px; }
+  .title-row { gap: clamp(8px, 3vw, 12px); padding: 6px 4px clamp(10px, 3.4vw, 14px); }
+  h1 { font-size: clamp(26px, 8.6vw, 34px); }
+  .sub { font-size: clamp(12px, 3.8vw, 15px); }
+
+  .stats { gap: clamp(6px, 2.4vw, 10px); margin-bottom: clamp(12px, 4vw, 16px); }
+  .card { height: clamp(60px, 18.5vw, 84px); border-radius: clamp(20px, 6.6vw, 26px); padding: 0 4px; }
+  .card .lb { font-size: clamp(11px, 3.4vw, 13px); }
+  .card .vl { font-size: clamp(21px, 7.2vw, 30px); white-space: nowrap; }
+  .circle { width: clamp(40px, 12.6vw, 54px); height: clamp(40px, 12.6vw, 54px); }
+  .circle svg { width: clamp(20px, 6.6vw, 26px); height: clamp(20px, 6.6vw, 26px); }
+
+  .stage { --gap: var(--gap-base, 3px); }
+  .board-wrap {
+    --wpad: clamp(8px, 3.2vw, 16px);
+    padding: var(--wpad); border-radius: clamp(22px, 7.4vw, 30px); overflow: visible;
+    /* the card hugs the board: it is never wider than the board (capped at --maxw) plus its padding,
+       and is centred in the column — no empty card area beside a small board (e.g. 9×9 on a wide column) */
+    width: min(100%, calc(var(--maxw, 520px) + 2 * var(--wpad)));
+    margin-inline: auto;
+  }
+  .board {
+    width: 100%; max-width: var(--maxw, 520px); margin: 0 auto;
+    container-type: inline-size;
+    display: grid; gap: var(--gap, 3px);
+    grid-template-columns: repeat(var(--c, 9), minmax(0, 1fr));
+  }
+  .cell {
+    --cs: calc((100cqw - (var(--c, 9) - 1) * var(--gap, 3px)) / var(--c, 9));
+    width: auto; height: auto; aspect-ratio: 1 / 1; min-width: 0;
+    overflow: hidden;
+  }
+
+  .chips { flex-wrap: nowrap; gap: clamp(5px, 2.2vw, 10px); margin: clamp(14px, 5vw, 20px) 0 clamp(10px, 3.4vw, 14px); }
+  .chip { flex: 1 1 0; min-width: 0; max-width: 120px; justify-content: center; height: clamp(36px, 10.6vw, 42px); padding: 0 clamp(2px, 1.5vw, 12px); border-radius: clamp(11px, 3.4vw, 13px); font-size: clamp(12.5px, 3.8vw, 15px); gap: clamp(2px, 1vw, 6px); white-space: nowrap; }
+  .chip svg { width: clamp(14px, 4.4vw, 18px); height: clamp(14px, 4.4vw, 18px); flex: none; }
+  .chip .nm { display: inline-flex; align-items: center; gap: clamp(2px, 1vw, 6px); }
+  .chip small { display: none; }
+
+  .hints { font-size: clamp(12px, 3.5vw, 14px); line-height: 2; text-wrap: balance; }
+  kbd { font-size: clamp(10.5px, 3vw, 12px); min-width: clamp(20px, 6vw, 24px); padding: 0 clamp(4px, 1.4vw, 6px); line-height: clamp(19px, 5.8vw, 22px); border-radius: 7px; }
+  footer { font-size: clamp(13px, 3.7vw, 14px); }
+  /* the footer is the last child of <main>, i.e. it follows the hints directly instead of being pushed to
+     the bottom of the viewport (same spacing as before: 12px margin here instead of <main>'s bottom padding) */
+  main { padding-bottom: 0; }
+  footer { margin-top: 12px; }
+
+  /* ===== Desktop / wide viewport (>= 960px) =====
+     Two panes: the board on the left, the controls on the right.
+     The DOM order is untouched (mobile stays a single column); the right-hand blocks are only
+     re-positioned with grid areas.
+     The board is sized from BOTH the width and the height left in the viewport (see .board-wrap),
+     so it fits on screen without scrolling; --cell-min / --cell-max bound the cell size. */
+  /* a tall board shown sideways (JS adds .sideways on wide screens): fill the cells column by column,
+     i.e. cell (row r, col c) is displayed at (row c, col r). --c / --r are already the displayed counts. */
+  .board.sideways { grid-auto-flow: column; grid-template-rows: repeat(var(--r, 9), auto); }
+
+  @media (min-width: 960px) {
+    :root {
+      --page-max: 1600px;                         /* header + content max width */
+      --page-pad: clamp(24px, 3vw, 40px);
+      --col-gap: clamp(24px, 3vw, 48px);
+      --side-w: clamp(340px, 29vw, 440px);        /* right-hand panel */
+      --wp: 20px;                                 /* padding of the board card */
+      --cell-min: 22px;                           /* below this the page scrolls instead of shrinking cells */
+      --cell-max: clamp(72px, 7.4vh, 104px);      /* bigger screens, bigger cells (up to a limit) */
+    }
+
+    .header-in { max-width: var(--page-max); padding: 12px var(--page-pad); gap: 12px; }
+
+    main {
+      max-width: var(--page-max);
+      padding: 24px var(--page-pad) 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) var(--side-w);
+      grid-template-rows: auto auto auto auto 1fr;
+      grid-template-areas:
+        "stage title"
+        "stage stats"
+        "stage chips"
+        "stage hints"
+        "stage footer";
+      column-gap: var(--col-gap);
+      row-gap: 20px;
+      align-items: start;
+    }
+
+    /* left: board.  .stage is a size container that fills the free area, so 100cqw / 100cqh are the
+       width / height available to the board. */
+    .stage {
+      --gap: calc(var(--gap-base, 3px) * 1.6);    /* larger cells get a slightly wider gap */
+      grid-area: stage;
+      align-self: stretch;
+      container-type: size;
+      display: grid;
+      place-items: start center;
+      min-height: calc(var(--cell-min) * var(--r, 9) + (var(--r, 9) - 1) * var(--gap, 3px) + 2 * var(--wp));
+    }
+    .board-wrap {
+      /* board width = the smallest of: free width, width that fits the free height, --cell-max cells */
+      --bw: min(
+        100cqw - 2 * var(--wp),
+        (100cqh - 2 * var(--wp) - (var(--r, 9) - 1) * var(--gap, 3px)) / var(--r, 9) * var(--c, 9) + (var(--c, 9) - 1) * var(--gap, 3px),
+        var(--cell-max) * var(--c, 9) + (var(--c, 9) - 1) * var(--gap, 3px)
+      );
+      width: calc(var(--bw) + 2 * var(--wp));
+      padding: var(--wp);
+      margin: 0;
+      border-radius: 32px;
+    }
+    .board { max-width: none; }
+
+    /* right: info + controls */
+    .title-row { grid-area: title; padding: 0 4px; }
+    h1 { font-size: 40px; }
+    .sub { font-size: 16px; }
+
+    .stats { grid-area: stats; margin: 0; gap: 12px; }
+    .card { height: 92px; border-radius: 28px; }
+    .card .lb { font-size: 14px; }
+    .card .vl { font-size: 32px; }
+    .circle { width: 56px; height: 56px; }
+    .circle svg { width: 28px; height: 28px; }
+
+    .chips { grid-area: chips; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }
+    .chip { max-width: none; height: 62px; flex-direction: column; gap: 1px; padding: 0 12px; font-size: 16px; border-radius: 18px; }
+    .chip small { display: block; font-size: 12.5px; }
+
+    .hints { grid-area: hints; text-align: left; background: var(--surf-c); border-radius: 24px; padding: 16px 20px; font-size: 13.5px; line-height: 1.9; text-wrap: pretty; word-break: keep-all; transition: background .3s; }
+    .hints .k { white-space: nowrap; }          /* keep "F 插旗，" etc. together; lines only break between groups */
+    .hints kbd { background: var(--surf-ch); }
+
+    /* the footer sits right under the hints card in the right-hand panel (not at the bottom of the window) */
+    footer { grid-area: footer; align-self: start; margin: 0; padding: 0 4px env(safe-area-inset-bottom); }
+    .modal { max-width: 420px; }
+  }
+
+  /* wide but short windows (e.g. a 768p laptop): compact right-hand panel so it never gets taller
+     than the board area — difficulty chips go back to a single row, spacing tightens */
+  @media (min-width: 960px) and (max-height: 720px) {
+    main { padding-top: 16px; row-gap: 14px; }
+    h1 { font-size: 32px; }
+    .card { height: 76px; }
+    .card .vl { font-size: 28px; }
+    .chips { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .chip { height: 42px; flex-direction: row; padding: 0 6px; font-size: 15px; border-radius: 14px; }
+    .chip small { display: none; }
+    .hints { padding: 12px 16px; font-size: 13px; line-height: 1.75; }
+  }
+</style>
+<style>
+@font-face {
+    font-family: 'Nebulove';
+    src: url('https://nebulove.92li.uk/Nebulove.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-in">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/><circle cx="10.6" cy="10.6" r="1.4" fill="var(--primary)" stroke="none"/></svg>
+    </div>
+    <div class="brand">YiMines <span class="badge">Web</span></div>
+    <div class="spacer"></div>
+    <button class="icon-btn" id="themeBtn" aria-label="切换深色/浅色模式" title="切换深色/浅色模式"></button>
+    <div class="anchor">
+      <button class="icon-btn" id="paletteBtn" aria-label="切换配色" title="切换配色">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.2-.64-1.67-.08-.1-.13-.21-.13-.33 0-.28.22-.5.5-.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9zM6.5 13C5.67 13 5 12.33 5 11.5S5.67 10 6.5 10 8 10.67 8 11.5 7.33 13 6.5 13zm3-4C8.67 9 8 8.33 8 7.5S8.67 6 9.5 6s1.5.67 1.5 1.5S10.33 9 9.5 9zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 6 14.5 6s1.5.67 1.5 1.5S15.33 9 14.5 9zm3 4c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+      </button>
+      <div class="popover palette-pop" id="palettePop">
+        <div class="palette-title">选择配色</div>
+        <div class="swatches" id="swatches"></div>
+      </div>
+    </div>
+    <div class="anchor">
+      <button class="icon-btn" id="menuBtn" aria-label="菜单" title="菜单">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+      </button>
+      <div class="popover menu-pop" id="menuPop">
+        <button class="menu-item" id="miHow"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>玩法说明</button>
+        <button class="menu-item" id="miStats"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0011 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 003.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>最佳成绩</button>
+        <button class="menu-item" id="miClear"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>清除记录</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="title-row">
+    <h1>扫雷</h1>
+    <span class="sub" id="subTitle">简单 · 9×9</span>
+  </div>
+
+  <div class="stats">
+    <div class="card a"><span class="lb">地雷</span><span class="vl" id="minesLeft">10</span></div>
+    <div class="card b"><span class="lb">用时</span><span class="vl" id="timer">00:00</span></div>
+    <button class="circle tonal" id="flagBtn" aria-label="插旗模式" title="插旗模式 (F)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6 14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
+    </button>
+    <button class="circle filled" id="restartBtn" aria-label="重新开始" title="重新开始 (R)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.96 7.96 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+    </button>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="board-wrap" id="boardWrap">
+      <div class="board" id="board" role="grid" aria-label="扫雷棋盘"></div>
+    </div>
+  </div>
+
+  <div class="chips" id="chips"></div>
+
+  <div class="hints">
+    点击翻开格子，长按或右键插旗，点击数字可快速翻开周围<br>
+    <span class="k"><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> / <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 移动，</span>
+    <span class="k"><kbd>空格</kbd> 翻开，</span><span class="k"><kbd>F</kbd> 插旗，</span><span class="k"><kbd>R</kbd> 重开</span><br>
+    数字表示周围 8 格内的地雷数量，翻开所有安全格即获胜
+  </div>
+
+  <footer>Made with love by <a href="https://github.com/lingyicute" target="_blank" rel="noopener noreferrer">lingyicute</a> ❤️</footer>
+</main>
+
+<div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+
+  /* ---------- Icons ---------- */
+  const ICON = {
+    mine: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5.5" fill="currentColor" stroke="none"/><path d="M12 2.5v3.2M12 18.3v3.2M2.5 12h3.2M18.3 12h3.2M5.3 5.3l2.3 2.3M16.4 16.4l2.3 2.3M18.7 5.3l-2.3 2.3M7.6 16.4l-2.3 2.3"/><circle cx="10.4" cy="10.4" r="1.5" fill="#fff" stroke="none" opacity=".75"/></svg>',
+    flag: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.4 6 14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',
+    sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>',
+    moon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.3 3a9 9 0 1 0 8.7 11.6A7 7 0 0 1 12.3 3z"/></svg>',
+    trophy: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0011 15.9V19H7v2h10v-2h-4v-3.1a5.01 5.01 0 003.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>',
+    info: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 17h2v-6h-2v6zm1-15C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zM11 9h2V7h-2v2z"/></svg>'
+  };
+
+  /* ---------- Theme ---------- */
+  const PALETTES = [
+    { n: '紫色', h: 265 }, { n: '蓝色', h: 215 }, { n: '青色', h: 178 }, { n: '绿色', h: 135 },
+    { n: '黄色', h: 45 }, { n: '橙色', h: 22 }, { n: '粉色', h: 335 }, { n: '红色', h: 3 }
+  ];
+  const root = document.documentElement;
+  let theme = store.get('yimines-theme', null) || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  let hue = store.get('yimines-hue', 265);
+
+  function applyTheme() {
+    root.dataset.theme = theme;
+    root.style.setProperty('--h', hue);
+    $('themeBtn').innerHTML = theme === 'dark' ? ICON.sun : ICON.moon;
+    requestAnimationFrame(() => {
+      const bg = getComputedStyle(root).getPropertyValue('--header').trim();
+      document.querySelector('meta[name=theme-color]').setAttribute('content', bg);
+    });
+    document.querySelectorAll('.swatch').forEach((s, i) => s.classList.toggle('sel', PALETTES[i].h === hue));
+  }
+  $('themeBtn').onclick = () => { theme = theme === 'dark' ? 'light' : 'dark'; store.set('yimines-theme', theme); applyTheme(); };
+  $('swatches').innerHTML = PALETTES.map(p =>
+    `<button class="swatch" title="${p.n}" aria-label="${p.n}" data-h="${p.h}" style="background:hsl(${p.h} 70% 66%)">${ICON.check}</button>`).join('');
+  $('swatches').onclick = e => {
+    const b = e.target.closest('.swatch'); if (!b) return;
+    hue = +b.dataset.h; store.set('yimines-hue', hue); applyTheme();
+  };
+
+  /* popovers */
+  const pops = { palette: [$('paletteBtn'), $('palettePop')], menu: [$('menuBtn'), $('menuPop')] };
+  function closePops(except) { for (const k in pops) if (k !== except) pops[k][1].classList.remove('open'); }
+  for (const k in pops) {
+    pops[k][0].onclick = e => { e.stopPropagation(); closePops(k); pops[k][1].classList.toggle('open'); };
+    pops[k][1].onclick = e => e.stopPropagation();
+  }
+  document.addEventListener('click', () => closePops());
+
+  /* ---------- Modal ---------- */
+  function showModal({ icon, bad, title, body, center, buttons }) {
+    $('modal').innerHTML =
+      (icon ? `<div class="mi ${bad ? 'bad' : ''}">${icon}</div>` : '') +
+      `<h2>${title}</h2><div class="body ${center ? 'center' : ''}">${body}</div><div class="actions"></div>`;
+    const act = $('modal').querySelector('.actions');
+    buttons.forEach(b => {
+      const el = document.createElement('button');
+      el.className = 'btn' + (b.fill ? ' fill' : ''); el.textContent = b.text;
+      el.onclick = () => { closeModal(); b.onClick && b.onClick(); };
+      act.appendChild(el);
+    });
+    $('overlay').classList.add('open');
+  }
+  function closeModal() { $('overlay').classList.remove('open'); }
+  $('overlay').onclick = e => { if (e.target === $('overlay')) closeModal(); };
+  const isModalOpen = () => $('overlay').classList.contains('open');
+
+  /* ---------- Game config ---------- */
+  const DIFFS = [
+    { k: 'easy', name: '简单', c: 9, r: 9, m: 10 },
+    { k: 'medium', name: '中等', c: 12, r: 12, m: 24 },
+    { k: 'hard', name: '困难', c: 16, r: 16, m: 40 },
+    { k: 'expert', name: '专家', c: 16, r: 24, m: 80 }
+  ];
+  let diff = DIFFS.find(d => d.k === store.get('yimines-diff', 'easy')) || DIFFS[0];
+  let data = store.get('yimines-data', { best: {}, played: 0, won: 0 });
+
+  /* ---------- State ---------- */
+  let R, C, M, N;
+  let mine, adj, revealed, flagged;
+  let started, over, won, revealedCount, flagCount, hit;
+  let timerId = null, startTime = 0, elapsed = 0;
+  let flagMode = false, cursor = -1, kb = false;
+  let cells = [];
+
+  const boardEl = $('board');
+  const stageEl = $('stage');
+
+  function fmt(t) { const s = Math.floor(t); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+  function fmtBest(t) { return t == null ? '--' : (t < 600 ? t.toFixed(1) + ' 秒' : fmt(t)); }
+
+  function neighbors(i) {
+    const r = (i / C) | 0, c = i % C, out = [];
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      if (!dr && !dc) continue;
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < R && nc >= 0 && nc < C) out.push(nr * C + nc);
+    }
+    return out;
+  }
+
+  /* Wide screens: a tall board (the 16×24 expert) is shown sideways (24×16) so that it uses the width
+     of the screen instead of its height. This is a pure display transform — rules, scores and cell
+     indices are untouched (CSS grid fills the cells column-first, see .board.sideways).
+     Set SIDEWAYS_ON_WIDE to false to always keep the board upright. */
+  const SIDEWAYS_ON_WIDE = true;
+  const WIDE = matchMedia('(min-width: 960px)');             // keep in sync with the CSS breakpoint
+  const sidewaysFor = d => SIDEWAYS_ON_WIDE && WIDE.matches && d.r > d.c;
+  const sizeOf = d => (sidewaysFor(d) ? [d.r, d.c] : [d.c, d.r]).join('×');   // "columns×rows" as displayed
+
+  function layout() {
+    // Cells scale fluidly with the container width (CSS grid + container units); no horizontal scrolling.
+    // The variables live on #stage (an ancestor of the board) so that the desktop layout can also
+    // read them to fit the board into the viewport height — see "Desktop / wide viewport" in the CSS.
+    const sideways = sidewaysFor(diff);
+    const vc = sideways ? R : C, vr = sideways ? C : R;      // columns / rows as displayed
+    const gap = vc >= 16 ? 2 : 3;
+    boardEl.classList.toggle('sideways', sideways);
+    stageEl.style.setProperty('--c', vc);
+    stageEl.style.setProperty('--r', vr);
+    stageEl.style.setProperty('--gap-base', gap + 'px');   // CSS derives --gap from it (a bit wider on desktop)
+    stageEl.style.setProperty('--maxw', (vc * 52 + (vc - 1) * gap) + 'px');
+  }
+
+  function buildChips() {
+    // <small> (board size · mines) is only shown in the desktop side panel
+    $('chips').innerHTML = DIFFS.map(d =>
+      `<button class="chip ${d.k === diff.k ? 'sel' : ''}" data-k="${d.k}"><span class="nm">${d.k === diff.k ? ICON.check : ''}${d.name}</span><small>${sizeOf(d)} · ${d.m} 雷</small></button>`).join('');
+  }
+  $('chips').onclick = e => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    diff = DIFFS.find(d => d.k === b.dataset.k); store.set('yimines-diff', diff.k);
+    newGame();
+  };
+
+  function newGame() {
+    clearInterval(timerId); timerId = null;
+    R = diff.r; C = diff.c; M = diff.m; N = R * C;
+    mine = new Uint8Array(N); adj = new Uint8Array(N);
+    revealed = new Uint8Array(N); flagged = new Uint8Array(N);
+    started = over = won = false; revealedCount = flagCount = 0; hit = -1; elapsed = 0;
+    cursor = kb ? Math.floor(R / 2) * C + Math.floor(C / 2) : -1;
+    $('subTitle').textContent = `${diff.name} · ${sizeOf(diff)}`;
+    $('timer').textContent = '00:00';
+    updateMines();
+    buildChips();
+    boardEl.innerHTML = '';
+    boardEl.classList.remove('shake');
+    cells = [];
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < N; i++) {
+      const el = document.createElement('div');
+      el.className = 'cell'; el.dataset.i = i; el.setAttribute('role', 'gridcell');
+      cells.push(el); frag.appendChild(el);
+    }
+    boardEl.appendChild(frag);
+    layout();
+    if (cursor >= 0) paint(cursor);
+  }
+
+  function updateMines() { $('minesLeft').textContent = M - flagCount; }
+
+  function paint(i, delay) {
+    const el = cells[i];
+    let cls = 'cell', html = '';
+    if (revealed[i]) {
+      cls += ' open';
+      if (adj[i] > 0) { cls += ' has n' + adj[i]; html = adj[i]; }
+    } else if (over && mine[i] && !flagged[i]) {
+      cls += ' open mine'; html = ICON.mine;
+    } else if (over && flagged[i] && !mine[i]) {
+      cls += ' open wrong flag'; html = ICON.flag;
+    } else if (flagged[i]) {
+      cls += ' flag'; html = ICON.flag;
+    }
+    if (hit === i) cls += ' boom';
+    if (kb && cursor === i && !over) cls += ' cursor';
+    if (delay !== undefined) { cls += ' anim'; el.style.animationDelay = delay + 'ms'; }
+    el.className = cls;
+    el.innerHTML = html;
+  }
+
+  function placeMines(safe) {
+    const banned = new Set([safe, ...neighbors(safe)]);
+    const pool = [];
+    for (let i = 0; i < N; i++) if (!banned.has(i)) pool.push(i);
+    for (let k = 0; k < M; k++) {
+      const j = k + Math.floor(Math.random() * (pool.length - k));
+      [pool[k], pool[j]] = [pool[j], pool[k]];
+      mine[pool[k]] = 1;
+    }
+    for (let i = 0; i < N; i++) {
+      if (mine[i]) continue;
+      let n = 0; for (const j of neighbors(i)) n += mine[j];
+      adj[i] = n;
+    }
+  }
+
+  function startTimer() {
+    startTime = performance.now();
+    timerId = setInterval(() => { elapsed = (performance.now() - startTime) / 1000; $('timer').textContent = fmt(elapsed); }, 200);
+  }
+
+  function reveal(i) {
+    if (over || revealed[i] || flagged[i]) return;
+    if (!started) { started = true; placeMines(i); startTimer(); }
+    if (mine[i]) return lose(i);
+    // flood fill with BFS levels for ripple animation
+    let level = [i]; revealed[i] = 1; revealedCount++;
+    let depth = 0;
+    while (level.length) {
+      const next = [];
+      for (const k of level) {
+        paint(k, Math.min(depth * 35, 500));
+        if (adj[k] === 0) {
+          for (const j of neighbors(k)) {
+            if (!revealed[j] && !flagged[j] && !mine[j]) { revealed[j] = 1; revealedCount++; next.push(j); }
+          }
+        }
+      }
+      level = next; depth++;
+    }
+    if (revealedCount === N - M) win();
+  }
+
+  function chord(i) {
+    if (!revealed[i] || adj[i] === 0 || over) return;
+    const nb = neighbors(i);
+    let f = 0; for (const j of nb) f += flagged[j];
+    if (f !== adj[i]) return;
+    for (const j of nb) { if (!flagged[j] && !revealed[j]) { reveal(j); if (over) return; } }
+  }
+
+  function toggleFlag(i) {
+    if (over || revealed[i]) return;
+    if (!started && !flagged[i] && false) return;
+    flagged[i] = flagged[i] ? 0 : 1;
+    flagCount += flagged[i] ? 1 : -1;
+    paint(i, 0); updateMines();
+    if (navigator.vibrate) navigator.vibrate(12);
+  }
+
+  function lose(i) {
+    over = true; hit = i; clearInterval(timerId);
+    elapsed = started ? (performance.now() - startTime) / 1000 : 0;
+    data.played++; store.set('yimines-data', data);
+    const mines = []; for (let k = 0; k < N; k++) if (mine[k] && k !== i) mines.push(k);
+    paint(i, 0);
+    cells[i].classList.add('open', 'mine', 'boom');
+    cells[i].innerHTML = ICON.mine;
+    mines.sort(() => Math.random() - .5);
+    mines.forEach((k, idx) => { revealed[k] ? 0 : paint(k, 120 + Math.min(idx * 25, 900)); });
+    for (let k = 0; k < N; k++) if (flagged[k] && !mine[k]) paint(k);
+    boardEl.classList.remove('shake'); void boardEl.offsetWidth; boardEl.classList.add('shake');
+    if (navigator.vibrate) navigator.vibrate([40, 40, 80]);
+    setTimeout(() => {
+      if (!over || won) return;
+      showModal({
+        icon: ICON.mine, bad: true, title: '踩到地雷了', center: true,
+        body: `本局用时 <b>${fmt(elapsed)}</b>，已翻开 <b>${revealedCount}</b> / ${N - M} 个安全格。<br>别灰心，再来一局吧！`,
+        buttons: [{ text: '查看棋盘' }, { text: '再来一局', fill: true, onClick: newGame }]
+      });
+    }, 1300);
+  }
+
+  function win() {
+    over = won = true; clearInterval(timerId);
+    elapsed = (performance.now() - startTime) / 1000;
+    for (let k = 0; k < N; k++) if (mine[k] && !flagged[k]) { flagged[k] = 1; flagCount++; paint(k, 100); }
+    updateMines(); $('timer').textContent = fmt(elapsed);
+    data.played++; data.won++;
+    const prev = data.best[diff.k];
+    const record = prev == null || elapsed < prev;
+    if (record) data.best[diff.k] = +elapsed.toFixed(1);
+    store.set('yimines-data', data);
+    if (navigator.vibrate) navigator.vibrate([30, 30, 30, 30, 90]);
+    setTimeout(() => showModal({
+      icon: ICON.trophy, title: record ? '新纪录！' : '清除成功！', center: true,
+      body: `${diff.name}（${sizeOf(diff)}）用时 <b>${elapsed.toFixed(1)} 秒</b><br>${record ? '你刷新了该难度的最佳成绩 🎉' : '最佳成绩：<b>' + fmtBest(data.best[diff.k]) + '</b>'}`,
+      buttons: [{ text: '关闭' }, { text: '再来一局', fill: true, onClick: newGame }]
+    }), 900);
+  }
+
+  /* ---------- Input ---------- */
+  let pressTimer = null, longPressed = false, startXY = null, lastPtr = 'mouse';
+  const idxOf = e => { const c = e.target.closest('.cell'); return c ? +c.dataset.i : -1; };
+
+  boardEl.addEventListener('pointerdown', e => {
+    lastPtr = e.pointerType;
+    longPressed = false;
+    if (e.pointerType === 'mouse') return;
+    const i = idxOf(e); if (i < 0) return;
+    startXY = [e.clientX, e.clientY];
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => { longPressed = true; if (!revealed[i]) toggleFlag(i); else chord(i); }, 380);
+  });
+  boardEl.addEventListener('pointermove', e => {
+    if (pressTimer && startXY && Math.hypot(e.clientX - startXY[0], e.clientY - startXY[1]) > 10) { clearTimeout(pressTimer); pressTimer = null; }
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => boardEl.addEventListener(ev, () => { clearTimeout(pressTimer); pressTimer = null; }));
+
+  boardEl.addEventListener('click', e => {
+    if (longPressed) { longPressed = false; return; }
+    const i = idxOf(e); if (i < 0) return;
+    setCursor(i, false);
+    if (flagMode && !revealed[i]) return toggleFlag(i);
+    if (revealed[i]) chord(i); else reveal(i);
+  });
+  boardEl.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    if (lastPtr !== 'mouse') return;
+    const i = idxOf(e); if (i < 0) return;
+    if (revealed[i]) chord(i); else toggleFlag(i);
+  });
+  boardEl.addEventListener('auxclick', e => {
+    if (e.button !== 1) return; e.preventDefault();
+    const i = idxOf(e); if (i >= 0) chord(i);
+  });
+
+  function setCursor(i, show) {
+    const old = cursor; kb = show; cursor = i;
+    if (old >= 0 && cells[old]) paint(old);
+    if (i >= 0 && cells[i]) paint(i);
+  }
+
+  function setFlagMode(v) {
+    flagMode = v; $('flagBtn').classList.toggle('active', v);
+  }
+  $('flagBtn').onclick = () => setFlagMode(!flagMode);
+  $('restartBtn').onclick = newGame;
+
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'Escape') { closeModal(); closePops(); return; }
+    if (isModalOpen()) return;
+    const k = e.key.toLowerCase();
+    let move = { arrowup: [-1, 0], w: [-1, 0], arrowdown: [1, 0], s: [1, 0], arrowleft: [0, -1], a: [0, -1], arrowright: [0, 1], d: [0, 1] }[k];
+    if (move && sidewaysFor(diff)) move = [move[1], move[0]];   // board is shown transposed: swap row/column steps
+    if (move) {
+      e.preventDefault();
+      let cur = cursor < 0 ? Math.floor(R / 2) * C + Math.floor(C / 2) : cursor;
+      if (!kb || cursor < 0) { setCursor(cur, true); return; }
+      const r = Math.max(0, Math.min(R - 1, ((cur / C) | 0) + move[0]));
+      const c = Math.max(0, Math.min(C - 1, (cur % C) + move[1]));
+      setCursor(r * C + c, true);
+      cells[r * C + c].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    } else if (k === ' ' || k === 'enter') {
+      if (document.activeElement && document.activeElement.tagName === 'BUTTON') return;
+      e.preventDefault();
+      if (cursor < 0) return;
+      if (revealed[cursor]) chord(cursor); else reveal(cursor);
+    } else if (k === 'f') {
+      if (cursor >= 0 && kb) toggleFlag(cursor); else setFlagMode(!flagMode);
+    } else if (k === 'r') {
+      newGame();
+    }
+  });
+
+  /* ---------- Menu ---------- */
+  $('miHow').onclick = () => { closePops(); showModal({
+    icon: ICON.info, title: '玩法说明',
+    body: `<ul>
+      <li>点击格子翻开它，踩到地雷即失败。</li>
+      <li>数字表示周围 8 格内的地雷数量。</li>
+      <li><b>长按</b>（手机）或<b>右键</b>（电脑）可插旗标记地雷，也可开启右上方的「插旗模式」。</li>
+      <li>点击已翻开的数字，若周围旗数与数字相同，将自动翻开其余格子。</li>
+      <li>第一次点击一定安全，并且不会紧邻地雷。</li>
+      <li>翻开所有非地雷格子即可获胜。</li></ul>`,
+    buttons: [{ text: '知道了', fill: true }]
+  }); };
+  $('miStats').onclick = () => { closePops();
+    const rows = DIFFS.map(d => `<tr><td>${d.name} · ${sizeOf(d)} · ${d.m} 雷</td><td>${fmtBest(data.best[d.k])}</td></tr>`).join('');
+    const rate = data.played ? Math.round(data.won / data.played * 100) : 0;
+    showModal({
+      icon: ICON.trophy, title: '最佳成绩',
+      body: `<table>${rows}<tr><td>胜场 / 总场数</td><td>${data.won} / ${data.played}</td></tr><tr><td>胜率</td><td>${rate}%</td></tr></table>`,
+      buttons: [{ text: '关闭', fill: true }]
+    });
+  };
+  $('miClear').onclick = () => { closePops(); showModal({
+    title: '清除记录', body: '确定要清除所有最佳成绩和统计数据吗？此操作无法撤销。',
+    buttons: [{ text: '取消' }, { text: '清除', fill: true, onClick: () => { data = { best: {}, played: 0, won: 0 }; store.set('yimines-data', data); } }]
+  }); };
+
+  /* ---------- Init ---------- */
+  let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(layout, 80); });
+  // crossing the desktop breakpoint can flip the board between upright and sideways
+  WIDE.addEventListener('change', () => {
+    $('subTitle').textContent = `${diff.name} · ${sizeOf(diff)}`;
+    buildChips(); layout();
+  });
+  applyTheme();
+  newGame();
+})();
+</script>
+</body>
+</html>
