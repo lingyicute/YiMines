@@ -735,7 +735,7 @@
     store.set('yimines-data', data);
     if (navigator.vibrate) navigator.vibrate([30, 30, 30, 30, 90]);
     setTimeout(() => showModal({
-      icon: ICON.trophy, title: record ? '新纪录！' : '清除成功！', center: true,
+      icon: ICON.trophy, title: record ? '新纪录!' : '清除成功！', center: true,
       body: `${diff.name}（${sizeOf(diff)}）用时 <b>${elapsed.toFixed(1)} 秒</b><br>${record ? '你刷新了该难度的最佳成绩 🎉' : '最佳成绩：<b>' + fmtBest(data.best[diff.k]) + '</b>'}`,
       buttons: [{ text: '关闭' }, { text: '再来一局', fill: true, onClick: newGame }]
     }), 900);
@@ -822,7 +822,7 @@
     body: `<ul>
       <li>点击格子翻开它，踩到地雷即失败。</li>
       <li>数字表示周围 8 格内的地雷数量。</li>
-      <li><b>长按</b>（手机）或<b>右键</b>（电脑）可插旗标记地雷，也可开启右上方的「插旗模式」。</li>
+      <li><b>长按</b>（手机）或<b>右键</b>（电脑）可插旗标记地雷，也可开启右上方的「插旗模式」哦。</li>
       <li>点击已翻开的数字，若周围旗数与数字相同，将自动翻开其余格子。</li>
       <li>第一次点击一定安全，并且不会紧邻地雷。</li>
       <li>翻开所有非地雷格子即可获胜。</li></ul>`,
