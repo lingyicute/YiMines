@@ -20,7 +20,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-orange.svg" alt="License: AGPL-3.0"></a>
-  <a href="index.html"><img src="https://img.shields.io/badge/Single%20File-90%20KB-blue" alt="Single File 90 KB"></a>
+  <a href="index.html"><img src="https://img.shields.io/badge/Single%20File-93%20KB-blue" alt="Single File 93 KB"></a>
   <a href="https://github.com/lingyicute/YiMines"><img src="https://img.shields.io/badge/Dependencies-Zero-brightgreen" alt="Zero Dependencies"></a>
   <a href="https://github.com/lingyicute/YiMines"><img src="https://img.shields.io/badge/Ads%20%26%20Trackers-Zero-brightgreen" alt="No Ads No Tracking"></a>
   <a href="https://github.com/lingyicute/YiMines"><img src="https://img.shields.io/github/stars/lingyicute/YiMines?style=flat&color=yellow" alt="GitHub Stars"></a>
@@ -111,7 +111,7 @@ Drop `index.html` on GitHub Pages, Cloudflare Pages, Netlify or any static host 
 
 ## 🔨 Building from Source
 
-There is no build step: `index.html` is the source *and* the artifact.
+There is no bundler and no dependency to install: `index.html` *is* the artifact. The one generated part — the embedded font subset — has its generator checked in.
 
 1. **Clone the repository**:
    ```bash
@@ -122,6 +122,17 @@ There is no build step: `index.html` is the source *and* the artifact.
 2. **Edit and reload** — the file is organised with banner comments (board generation, state, rendering, theming, dialogs), so the solver-ish parts and the UI parts stay easy to navigate.
 
 3. **Ship it** — commit and push; with GitHub Pages enabled, the update is live immediately.
+
+### Regenerating the embedded font subset
+
+The page embeds a ~33.6 KB subset (298 glyphs) of the 1.25 MB "Nebulove" typeface instead of linking it from a CDN, which is what keeps the "zero network requests" promise. When you add or change **user-visible text**, regenerate the subset — otherwise the new characters are simply not in the font and fall back to a system font:
+
+```bash
+pip install fonttools brotli
+python3 scripts/subset_font.py          # rewrites the @font-face block of index.html in place
+```
+
+- The script is **idempotent**: re-running it on an unchanged page produces no diff, and it reports any characters the typeface itself does not contain (currently ❤️ and 🎉, which fall back to the system emoji font).
 
 <br>
 
