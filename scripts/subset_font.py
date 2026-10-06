@@ -12,13 +12,15 @@ Nebulove 字体子集化 & 内嵌
 """
 import argparse, base64, io, os, re, sys, urllib.request
 FONT_URL = "https://raw.githubusercontent.com/lingyicute/Nebulove/main/Nebulove.woff2"
-FALLBACK_URL = "https://nebulove.92li.uk/Nebulove.woff2"   # 页面原有来源，作为回退
+# 不再写入远程地址
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_HTML = os.path.join(os.path.dirname(HERE), "index.html")
 ASCII = {chr(c) for c in range(32, 127)}
 PUNCT = set("：，。！？；‘’“”（）【】—…·《》×＝÷＋－、")
 
-FONT_FACE_RE = re.compile(r'@font-face\s*\{[^}]*\}', re.S)
+# 同时吃掉由本脚本生成的注释块，否则每次重跑都会在文件里多插一份注释
+GEN_COMMENT_RE = r'/\* ===== Nebulove 子集（内嵌，离线可用）=====.*?===== \*/\s*'
+FONT_FACE_RE = re.compile(r'(?:' + GEN_COMMENT_RE + r')?@font-face\s*\{[^}]*\}', re.S)
 
 
 def strip_non_render_text(html):
@@ -50,7 +52,7 @@ def build_subset(chars, ttf_path):
     from fontTools.ttLib import TTFont
     from fontTools.subset import Subsetter, Options
 
-    font = TTFont(ttf_path)
+    font = TTFont(ttf_path, recalcTimestamp=False)   # 不写 head.modified，保证同样输入 → 同样字节
     subsetter = Subsetter(options=Options())
     subsetter.populate(text="".join(sorted(chars)))
     subsetter.subset(font)
@@ -71,16 +73,13 @@ def make_font_face(b64, woff_kb, b64_kb, count, mode):
     return (
         "/* ===== Nebulove 子集（内嵌，离线可用）=====\n"
         "   由 scripts/subset_font.py 生成：只保留本页会用到的 %d 个字形（%s 模式）。\n"
-        "   1.25 MB woff2 → %.1f KB woff2（base64 后 %.1f KB），随页面一起加载、无网络请求。\n"
-        "   第二阶段 url 是页面原有的远程地址，仅当 data URI 不可用时兜底。 ===== */\n"
+        "   1.25 MB woff2 → %.1f KB woff2（base64 后 %.1f KB），随页面一起加载、无网络请求。 ===== */\n"
         '@font-face {\n'
         "  font-family: 'Nebulove';\n"
-        '  src: url("data:font/woff2;charset=utf-8;base64,%s") format("woff2"),\n'
-        '       url("%s") format("woff2");\n'
+        '  src: url("data:font/woff2;base64,%s") format("woff2");\n'
         "  font-weight: normal;\n"
         "  font-style: normal;\n"
-        "  font-display: swap;\n"
-        "}" % (count, mode, woff_kb, b64_kb, b64, FALLBACK_URL)
+        "}" % (count, mode, woff_kb, b64_kb, b64)
     )
 
 
@@ -121,7 +120,7 @@ def main():
         print("⚠️ 字体本身不含这些字符（将回退到系统字体）：%s" %
               " ".join("U+%04X" % ord(c) for c in sorted(missing)))
 
-    keep = os.path.join(HERE, "Nebulove-subset.woff2")
+    keep = os.path.join(HERE, "Nebulove-subset.woff2") 
     open(keep, "wb").write(wofl)
     print("子集文件：%s" % keep)
 
