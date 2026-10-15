@@ -6,7 +6,7 @@
   <img src="./assets/icon.png" alt="YiMines Logo" width="96" height="96" onerror="this.style.display='none'"/>
 </p>
 <h1 align="center">YiMines</h1>
-<h3 align="center">Just another minesweeper, simple yet beautiful.</h3>
+<h3 align="center">Clear the board, outsmart the mines.</h3>
 
 <p align="center">A clean, lightweight, and privacy-first minesweeper, crafted with Material You and modern web engineering.</p>
 <p align="center">Made with ❤️ by <a href="https://github.com/lingyicute">lingyicute</a>.</p>
