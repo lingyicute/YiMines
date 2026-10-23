@@ -10,7 +10,7 @@ Nebulove 字体子集化 & 内嵌
   python3 scripts/subset_font.py --all-text          # 保守模式：文件里出现的字符全收
   python3 scripts/subset_font.py --extra-chars glyphs.txt
 """
-import argparse, base64, io, os, re, sys, urllib.request
+import argparse, base64, io, os, re, sys, tempfile, urllib.request
 FONT_URL = "https://raw.githubusercontent.com/lingyicute/Nebulove/main/Nebulove.woff2"
 # 不再写入远程地址
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -69,17 +69,18 @@ def download(url, path):
         f.write(r.read())
 
 
-def make_font_face(b64, woff_kb, b64_kb, count, mode):
+def make_font_face(b64, source_kb, woff_kb, b64_kb, count, mode):
     return (
         "/* ===== Nebulove 子集（内嵌，离线可用）=====\n"
         "   由 scripts/subset_font.py 生成：只保留本页会用到的 %d 个字形（%s 模式）。\n"
-        "   1.25 MB woff2 → %.1f KB woff2（base64 后 %.1f KB），随页面一起加载、无网络请求。 ===== */\n"
+        "   %.0f KB 完整字体 → %.1f KB woff2（base64 后 %.1f KB），随页面一起加载、无网络请求。 ===== */\n"
         '@font-face {\n'
         "  font-family: 'Nebulove';\n"
         '  src: url("data:font/woff2;base64,%s") format("woff2");\n'
         "  font-weight: normal;\n"
         "  font-style: normal;\n"
-        "}" % (count, mode, woff_kb, b64_kb, b64)
+        "  font-display: swap;\n"
+        "}" % (count, mode, source_kb, woff_kb, b64_kb, b64)
     )
 
 
@@ -95,47 +96,55 @@ def main():
 
     if not os.path.exists(args.html):
         sys.exit("找不到页面文件：%s" % args.html)
-    html = open(args.html, encoding="utf-8").read()
+    with open(args.html, encoding="utf-8") as f:
+        html = f.read()
     if not FONT_FACE_RE.search(html):
         sys.exit("页面里没有找到 @font-face 块，无法替换。")
 
     extra = ""
     if args.extra_chars:
-        extra = open(args.extra_chars, encoding="utf-8").read()
+        with open(args.extra_chars, encoding="utf-8") as f:
+            extra = f.read()
 
     chars = collect_chars(html, all_text=args.all_text, extra=extra)
     mode = "全文本" if args.all_text else "可渲染文本"
     print("需要保留的字符：%d 个（%s）" % (len(chars), mode))
 
-    ttf = args.ttf or "/tmp/Nebulove.woff2"
-    if not args.ttf:
-        print("下载完整字体：%s" % args.font_url)
-        download(args.font_url, ttf)
-    print("完整字体：%.0f KB（%s）" % (os.path.getsize(ttf) / 1024, os.path.basename(ttf)))
+    # Keep downloads out of the repository and remove them on every exit path.
+    with tempfile.TemporaryDirectory(prefix="yimines-font-") as tmpdir:
+        ttf = args.ttf or os.path.join(tmpdir, "Nebulove.woff2")
+        if not args.ttf:
+            print("下载完整字体：%s" % args.font_url)
+            download(args.font_url, ttf)
+        source_size = os.path.getsize(ttf)
+        print("完整字体：%.0f KB（%s）" % (source_size / 1024, os.path.basename(ttf)))
 
-    wofl, covered = build_subset(chars, ttf)
-    missing = {c for c in chars if ord(c) not in covered}
-    print("子集：%.2f KB woff2（%.1f%% 于原字体）" % (len(wofl) / 1024, len(wofl) / 1275924 * 100))
-    if missing:
-        print("⚠️ 字体本身不含这些字符（将回退到系统字体）：%s" %
-              " ".join("U+%04X" % ord(c) for c in sorted(missing)))
+        woff, covered = build_subset(chars, ttf)
+        missing = {c for c in chars if ord(c) not in covered}
+        print("子集：%.2f KB woff2（%.1f%% 于原字体）" % (len(woff) / 1024, len(woff) / source_size * 100))
+        if missing:
+            print("⚠️ 字体本身不含这些字符（将回退到系统字体）：%s" %
+                  " ".join("U+%04X" % ord(c) for c in sorted(missing)))
 
-    keep = os.path.join(HERE, "Nebulove-subset.woff2") 
-    open(keep, "wb").write(wofl)
-    print("子集文件：%s" % keep)
+        if args.check:
+            print("--check：未写入字体或页面。")
+            return
 
-    if args.check:
-        print("--check：不写入页面。")
-        return
-    b64 = base64.b64encode(wofl).decode("ascii")
-    new_face = make_font_face(b64, len(wofl) / 1024, len(b64) / 1024, len(covered), mode)
-    new_html, n = FONT_FACE_RE.subn(new_face, html, count=1)
-    if new_html == html:
-        print("页面已经是目标内容，未改动。")
-        return
-    open(args.html, "w", encoding="utf-8").write(new_html)
-    print("已更新 %s（@font-face 替换 %d 处）" % (args.html, n))
-    print("页面大小：%.0f KB → %.0f KB" % (len(html.encode()) / 1024, len(new_html.encode()) / 1024))
+        keep = os.path.join(HERE, "Nebulove-subset.woff2")
+        with open(keep, "wb") as f:
+            f.write(woff)
+        print("子集文件：%s" % keep)
+
+        b64 = base64.b64encode(woff).decode("ascii")
+        new_face = make_font_face(b64, source_size / 1024, len(woff) / 1024, len(b64) / 1024, len(covered), mode)
+        new_html, n = FONT_FACE_RE.subn(new_face, html, count=1)
+        if new_html == html:
+            print("页面已经是目标内容，未改动。")
+            return
+        with open(args.html, "w", encoding="utf-8") as f:
+            f.write(new_html)
+        print("已更新 %s（@font-face 替换 %d 处）" % (args.html, n))
+        print("页面大小：%.0f KB → %.0f KB" % (len(html.encode()) / 1024, len(new_html.encode()) / 1024))
 
 
 if __name__ == "__main__":
