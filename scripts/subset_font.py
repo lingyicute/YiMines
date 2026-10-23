@@ -5,8 +5,9 @@ Nebulove 字体子集化 & 内嵌
 
   pip install fonttools brotli
   
-  python3 scripts/subset_font.py                     # 就地
+  python3 scripts/subset_font.py                     # 就地更新 index.html
   python3 scripts/subset_font.py --check             # 只报告，不写入
+  python3 scripts/subset_font.py --output out.woff2  # 按需导出独立子集字体文件
   python3 scripts/subset_font.py --all-text          # 保守模式：文件里出现的字符全收
   python3 scripts/subset_font.py --extra-chars glyphs.txt
 """
@@ -89,6 +90,7 @@ def main():
     ap.add_argument("--html", default=DEFAULT_HTML)
     ap.add_argument("--font-url", default=FONT_URL)
     ap.add_argument("--ttf", help="本地字体路径（不下载）；默认下载 Nebulove.woff2")
+    ap.add_argument("-o", "--output", help="按需导出独立子集 woff2 文件的路径（默认不导出）")
     ap.add_argument("--extra-chars", help="追加字符集合所在的文本文件")
     ap.add_argument("--all-text", action="store_true", help="保守模式：文件里出现的字符全收")
     ap.add_argument("--check", action="store_true", help="只报告，不写入")
@@ -130,10 +132,13 @@ def main():
             print("--check：未写入字体或页面。")
             return
 
-        keep = os.path.join(HERE, "Nebulove-subset.woff2")
-        with open(keep, "wb") as f:
-            f.write(woff)
-        print("子集文件：%s" % keep)
+        if args.output:
+            out_dir = os.path.dirname(args.output)
+            if out_dir:
+                os.makedirs(out_dir, exist_ok=True)
+            with open(args.output, "wb") as f:
+                f.write(woff)
+            print("子集文件：%s" % args.output)
 
         b64 = base64.b64encode(woff).decode("ascii")
         new_face = make_font_face(b64, source_size / 1024, len(woff) / 1024, len(b64) / 1024, len(covered), mode)
