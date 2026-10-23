@@ -20,7 +20,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-orange.svg" alt="License: AGPL-3.0"></a>
-  <a href="index.html"><img src="https://img.shields.io/badge/Single%20File-96%20KB-blue" alt="Single File 96 KB"></a>
+  <a href="index.html"><img src="https://img.shields.io/badge/Single%20File-97%20KB-blue" alt="Single File 97 KB"></a>
   <a href="https://github.com/lingyicute/YiMines"><img src="https://img.shields.io/badge/Dependencies-Zero-brightgreen" alt="Zero Dependencies"></a>
   <a href="https://github.com/lingyicute/YiMines"><img src="https://img.shields.io/badge/Ads%20%26%20Trackers-Zero-brightgreen" alt="No Ads No Tracking"></a>
   <a href="https://github.com/lingyicute/YiMines"><img src="https://img.shields.io/github/stars/lingyicute/YiMines?style=flat&color=yellow" alt="GitHub Stars"></a>
@@ -125,7 +125,7 @@ There is no bundler and no dependency to install: `index.html` *is* the artifact
 
 ### Running regression tests
 
-The font-generation check-mode regression test uses only Python's standard library:
+The font-generation regression tests use only Python's standard library:
 
 ```bash
 python3 -m unittest discover -s tests
@@ -138,6 +138,7 @@ The page embeds a ~33.6 KB subset (298 glyphs) of the 1.25 MB "Nebulove" typefac
 ```bash
 pip install fonttools brotli
 python3 scripts/subset_font.py          # rewrites the @font-face block of index.html in place
+python3 scripts/subset_font.py -o out.woff2   # optionally export the standalone subset font file
 ```
 
 - The script is **idempotent**: re-running it on an unchanged page produces no diff, and it reports any characters the typeface itself does not contain (currently ❤️ and 🎉, which fall back to the system emoji font).

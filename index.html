@@ -418,7 +418,7 @@
   </div>
 </header>
 
-<main>
+<main id="main">
   <div class="title-row">
     <h1>扫雷</h1>
     <span class="sub" id="subTitle">简单 · 9×9</span>
@@ -532,7 +532,8 @@
   let lastFocus = null;
   const modalBackground = [document.querySelector('header'), $('main')];
   function showModal({ icon, bad, title, body, center, buttons }) {
-    lastFocus = document.activeElement;
+    closePops();
+    if (!isModalOpen()) lastFocus = document.activeElement;
     $('modal').innerHTML =
       (icon ? `<div class="mi ${bad ? 'bad' : ''}">${icon}</div>` : '') +
       `<h2 id="modalTitle">${title}</h2><div class="body ${center ? 'center' : ''}">${body}</div><div class="actions"></div>`;
@@ -552,6 +553,7 @@
     if (first) first.focus();
   }
   function closeModal() {
+    if (!isModalOpen()) return;
     $('overlay').classList.remove('open');
     modalBackground.forEach(el => { el.inert = false; });
     if (lastFocus && lastFocus !== document.body && lastFocus.isConnected) lastFocus.focus();
@@ -559,7 +561,7 @@
   }
   $('overlay').onclick = e => { if (e.target === $('overlay')) closeModal(); };
   const isModalOpen = () => $('overlay').classList.contains('open');
-  $('modal').addEventListener('keydown', e => {
+  document.addEventListener('keydown', e => {
     if (e.key !== 'Tab' || !isModalOpen()) return;
     const focusable = [...$('modal').querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')];
     if (!focusable.length) { e.preventDefault(); return; }
@@ -599,7 +601,7 @@
   let mine, adj, revealed, flagged;
   let started, over, won, revealedCount, flagCount, hit;
   let timerId = null, endModalId = null, startTime = 0, elapsed = 0;
-  let flagMode = false, cursor = -1, kb = false;
+  let flagMode = false, cursor = -1, kb = false, hadKey = false;
   let cells = [];
 
   const boardEl = $('board');
@@ -662,9 +664,14 @@
   }
 
   function buildChips() {
+    const keepFocus = $('chips').contains(document.activeElement);
     // <small> (board size · mines) is only shown in the desktop side panel
     $('chips').innerHTML = DIFFS.map(d =>
       `<button class="chip ${d.k === diff.k ? 'sel' : ''}" data-k="${d.k}" aria-pressed="${d.k === diff.k}"><span class="nm">${d.k === diff.k ? ICON.check : ''}${d.name}</span><small>${sizeOf(d)} · ${d.m} 雷</small></button>`).join('');
+    if (keepFocus) {
+      const sel = $('chips').querySelector('.chip.sel');
+      if (sel) sel.focus();
+    }
   }
   $('chips').onclick = e => {
     const b = e.target.closest('.chip'); if (!b) return;
@@ -674,7 +681,7 @@
 
   function newGame() {
     clearInterval(timerId); timerId = null;
-    kb = document.activeElement === boardEl;
+    kb = hadKey && kb;
     boardEl.removeAttribute('aria-activedescendant');
     if (endModalId !== null) { clearTimeout(endModalId); endModalId = null; }
     R = diff.r; C = diff.c; M = diff.m; N = R * C;
@@ -700,7 +707,7 @@
     layout();
     if (cursor >= 0) {
       paint(cursor);
-      if (kb) boardEl.setAttribute('aria-activedescendant', cells[cursor].id);
+      if (kb && document.activeElement === boardEl) boardEl.setAttribute('aria-activedescendant', cells[cursor].id);
     }
   }
 
@@ -878,15 +885,22 @@
     const i = idxOf(e); if (i >= 0) chord(i);
   });
 
+  document.addEventListener('keydown', e => { if (!e.metaKey && !e.altKey && !e.ctrlKey) hadKey = true; }, true);
+  document.addEventListener('pointerdown', () => { hadKey = false; }, true);
+
   function setCursor(i, show) {
     const old = cursor; kb = show; cursor = i;
     if (old >= 0 && cells[old]) paint(old);
     if (i >= 0 && cells[i]) {
       paint(i);
-      if (show) boardEl.setAttribute('aria-activedescendant', cells[i].id);
+      if (show) {
+        if (document.activeElement !== boardEl) boardEl.focus({ preventScroll: true });
+        boardEl.setAttribute('aria-activedescendant', cells[i].id);
+      }
       else boardEl.removeAttribute('aria-activedescendant');
     }
   }
+  boardEl.addEventListener('focus', () => { if (hadKey && cursor >= 0 && !kb) setCursor(cursor, true); });
 
   function setFlagMode(v) {
     flagMode = v;
@@ -905,7 +919,6 @@
     const k = e.key.toLowerCase();
     if (e.repeat && (k === 'f' || k === 'r')) return;
     let move = { arrowup: [-1, 0], w: [-1, 0], arrowdown: [1, 0], s: [1, 0], arrowleft: [0, -1], a: [0, -1], arrowright: [0, 1], d: [0, 1] }[k];
-    if (move && active && active.closest('button, a[href]')) return;
     if (move && sidewaysFor(diff)) move = [move[1], move[0]];   // board is shown transposed: swap row/column steps
     if (move) {
       e.preventDefault();
@@ -917,7 +930,7 @@
     } else if (k === ' ' || k === 'enter') {
       if (active && active.closest('button, a[href]')) return;
       e.preventDefault();
-      if (cursor < 0) setCursor(Math.floor(R / 2) * C + Math.floor(C / 2), true);
+      if (!kb || cursor < 0) setCursor(cursor < 0 ? Math.floor(R / 2) * C + Math.floor(C / 2) : cursor, true);
       if (revealed[cursor]) chord(cursor); else reveal(cursor);
     } else if (k === 'f') {
       if (cursor >= 0 && kb) toggleFlag(cursor); else setFlagMode(!flagMode);
