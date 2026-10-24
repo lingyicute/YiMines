@@ -694,6 +694,8 @@
 
   function newGame() {
     clearInterval(timerId); timerId = null;
+    // 重开时丢掉还没触发的长按，否则它会在新棋盘上插旗
+    cancelPress(); longPressed = false;
     kb = hadKey && kb;
     boardEl.removeAttribute('aria-activedescendant');
     if (endModalId !== null) { clearTimeout(endModalId); endModalId = null; }
@@ -866,6 +868,9 @@
   let pressTimer = null, longPressed = false, startXY = null, lastPtr = 'mouse';
   const idxOf = e => { const c = e.target.closest('.cell'); return c ? +c.dataset.i : -1; };
 
+  // 取消还没触发的长按；longPressed 不在这里复位——它负责吃掉长按之后紧随的 click
+  function cancelPress() { clearTimeout(pressTimer); pressTimer = null; startXY = null; }
+
   boardEl.addEventListener('pointerdown', e => {
     lastPtr = e.pointerType;
     longPressed = false;
@@ -876,9 +881,9 @@
     pressTimer = setTimeout(() => { longPressed = true; if (!revealed[i]) toggleFlag(i); else chord(i); }, 380);
   });
   boardEl.addEventListener('pointermove', e => {
-    if (pressTimer && startXY && Math.hypot(e.clientX - startXY[0], e.clientY - startXY[1]) > 10) { clearTimeout(pressTimer); pressTimer = null; }
+    if (pressTimer && startXY && Math.hypot(e.clientX - startXY[0], e.clientY - startXY[1]) > 10) cancelPress();
   });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => boardEl.addEventListener(ev, () => { clearTimeout(pressTimer); pressTimer = null; }));
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => boardEl.addEventListener(ev, cancelPress));
 
   boardEl.addEventListener('click', e => {
     if (longPressed) { longPressed = false; return; }
