@@ -654,6 +654,11 @@
     return flagged[i] ? `${position}，已插旗` : `${position}，未翻开`;
   }
 
+  // layout() only depends on the viewport width (cell count) and on whether the board is shown
+  // sideways; a phone's address bar collapsing fires resize without changing either of them.
+  const layoutSignature = () => window.innerWidth + '/' + WIDE.matches;
+  let layoutKey = '';
+
   function layout() {
     // Cells scale fluidly with the container width (CSS grid + container units); no horizontal scrolling.
     // The variables live on #stage (an ancestor of the board) so that the desktop layout can also
@@ -674,6 +679,7 @@
       cell.setAttribute('aria-colindex', sideways ? row + 1 : col + 1);
       cell.setAttribute('aria-label', cellLabel(i));
     });
+    layoutKey = layoutSignature();   // what this pass was computed from, so height-only resizes can be skipped
   }
 
   function buildChips() {
@@ -984,7 +990,14 @@
   }); };
 
   /* ---------- Init ---------- */
-  let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(layout, 80); });
+  let rz; window.addEventListener('resize', () => {
+    clearTimeout(rz);
+    rz = setTimeout(() => {
+      // skip the (few hundred attribute writes) re-layout when only the height changed
+      if (layoutSignature() === layoutKey) return;
+      layout();
+    }, 80);
+  });
   // crossing the desktop breakpoint can flip the board between upright and sideways
   WIDE.addEventListener('change', () => {
     $('subTitle').textContent = `${diff.name} · ${sizeOf(diff)}`;
