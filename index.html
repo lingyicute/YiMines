@@ -156,7 +156,7 @@
   .circle svg { transition: transform .35s; }
 
   /* Board */
-  .board-wrap { background: var(--surf-c); border-radius: 30px; padding: 12px; overflow: auto; transition: background .3s; scrollbar-width: thin; }
+  .board-wrap { background: var(--surf-c); border-radius: 30px; padding: 12px; transition: background .3s; scrollbar-width: thin; }
   .board { display: grid; width: max-content; margin: 0 auto; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   .board:focus-visible { outline: 3px solid var(--primary); outline-offset: 4px; }
   .cell { width: var(--cs); height: var(--cs); border-radius: calc(var(--cs) * .26); background: var(--cell); font-weight: 800; font-size: calc(var(--cs) * .56); line-height: 1; display: grid; place-items: center; cursor: pointer; transition: background .15s, transform .1s; position: relative; font-variant-numeric: tabular-nums; }
@@ -219,10 +219,6 @@
   .btn.fill { background: var(--primary); color: var(--on-primary); }
   .btn.fill:hover { filter: brightness(1.08); }
 
-  @media (min-width: 640px) {
-    .card { height: 84px; }
-    .board-wrap { padding: 16px; }
-  }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
   /* ===== Responsive / proportional scaling ===== */
